@@ -1,0 +1,63 @@
+namespace Coka.Social.Listening.Core.DTOs;
+
+public class ProjectDto
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Source { get; set; }
+    public string? Location { get; set; }
+    public string? Investor { get; set; }
+    public string? OriginUrl { get; set; }
+    public string? Logo { get; set; }
+    public string? CategoryKey { get; set; }
+    public string? CategoryLabel { get; set; }
+    public string? GroupKey { get; set; }
+    public string? GroupLabel { get; set; }
+    public int Status { get; set; }
+    public DateOnly? ConfirmationDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class ProjectFilterDto
+{
+    public string? Search { get; set; }
+    public string? CategoryKey { get; set; }
+    public string? GroupKey { get; set; }
+    public bool? MissingInvestor { get; set; }
+    public bool? MissingConfirmationDate { get; set; }
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+}
+
+public class PagedResult<T>
+{
+    public List<T> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+}
+
+public class BulkUpdateInvestorItemDto
+{
+    public Guid Id { get; set; }
+    public string Investor { get; set; } = string.Empty;
+}
+
+public class BulkUpdateConfirmationDateItemDto
+{
+    public Guid Id { get; set; }
+    public DateOnly ConfirmationDate { get; set; }
+}
+
+public class CreateProjectDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Source { get; set; }
+    public string? Location { get; set; }
+    public string? Investor { get; set; }
+    public string? OriginUrl { get; set; }
+    public string? Logo { get; set; }
+    public string? CategoryKey { get; set; }
+    public DateOnly? ConfirmationDate { get; set; }
+}

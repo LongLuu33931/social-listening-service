@@ -1,0 +1,62 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coka.Social.Listening.API", "Coka.Social.Listening.API.csproj", "{F7F6E686-6EBA-4E6E-945E-93959DFD892C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coka.Social.Listening.Core", "..\Coka.Social.Listening.Core\Coka.Social.Listening.Core.csproj", "{0D0B0BD5-086E-4D07-834A-9745F63A86DF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Coka.Social.Listening.Infra", "..\Coka.Social.Listening.Infra\Coka.Social.Listening.Infra.csproj", "{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Debug|x64.Build.0 = Debug|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Debug|x86.Build.0 = Debug|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Release|x64.ActiveCfg = Release|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Release|x64.Build.0 = Release|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Release|x86.ActiveCfg = Release|Any CPU
+		{F7F6E686-6EBA-4E6E-945E-93959DFD892C}.Release|x86.Build.0 = Release|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Debug|x64.Build.0 = Debug|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Debug|x86.Build.0 = Debug|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Release|x64.ActiveCfg = Release|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Release|x64.Build.0 = Release|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Release|x86.ActiveCfg = Release|Any CPU
+		{0D0B0BD5-086E-4D07-834A-9745F63A86DF}.Release|x86.Build.0 = Release|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Debug|x64.Build.0 = Debug|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Debug|x86.Build.0 = Debug|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Release|x64.ActiveCfg = Release|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Release|x64.Build.0 = Release|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Release|x86.ActiveCfg = Release|Any CPU
+		{E3A0C344-EA0E-461A-83CF-1F8E1C224DB2}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
