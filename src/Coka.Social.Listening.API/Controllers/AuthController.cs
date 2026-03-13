@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Coka.Social.Listening.Core.DTOs;
 using Coka.Social.Listening.Core.DTOs.Auth;
-using Coka.Social.Listening.Core.Interfaces;
+using Coka.Social.Listening.Core.Interfaces.Services;
 
 namespace Coka.Social.Listening.API.Controllers;
 

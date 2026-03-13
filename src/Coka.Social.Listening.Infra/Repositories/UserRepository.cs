@@ -1,6 +1,6 @@
 using Dapper;
 using Coka.Social.Listening.Core.Entities;
-using Coka.Social.Listening.Core.Interfaces;
+using Coka.Social.Listening.Core.Interfaces.Repositories;
 using Coka.Social.Listening.Infra.Data;
 
 namespace Coka.Social.Listening.Infra.Repositories;

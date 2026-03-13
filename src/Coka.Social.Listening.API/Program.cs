@@ -2,7 +2,8 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
-using Coka.Social.Listening.Core.Interfaces;
+using Coka.Social.Listening.Core.Interfaces.Repositories;
+using Coka.Social.Listening.Core.Interfaces.Services;
 using Coka.Social.Listening.Infra.Data;
 using Coka.Social.Listening.Infra.Repositories;
 using Coka.Social.Listening.Infra.Services;
@@ -12,14 +13,24 @@ var builder = WebApplication.CreateBuilder(args);
 // ─── AutoMapper ────────────────────────────────────────────────────────
 builder.Services.AddAutoMapper(typeof(Coka.Social.Listening.API.Mappings.MappingProfile));
 
+
 // ─── Database ──────────────────────────────────────────────────────────
 builder.Services.AddSingleton<DbConnectionFactory>();
 
-// ─── Repositories & Services ───────────────────────────────────────────
+// ─── Repositories ──────────────────────────────────────────────────────
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
+builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
+builder.Services.AddScoped<IProvinceRepository, ProvinceRepository>();
+
+// ─── Services ──────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IProvinceService, ProvinceService>();
+builder.Services.AddScoped<IArticleService, ArticleService>();
+builder.Services.AddScoped<IMentionService, MentionService>();
 
 // ─── Redis ─────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<Coka.Social.Listening.Infra.Data.RedisConnectionFactory>();
@@ -56,12 +67,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // ─── Controllers ───────────────────────────────────────────────────────
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new Coka.Social.Listening.API.Converters.DateOnlyJsonConverter());
-        options.JsonSerializerOptions.Converters.Add(new Coka.Social.Listening.API.Converters.NullableDateOnlyJsonConverter());
-    });
+builder.Services.AddControllers();
 
 // ─── OpenAPI (.NET 10 built-in) ────────────────────────────────────────
 builder.Services.AddOpenApi();
@@ -90,6 +96,35 @@ if (app.Environment.IsDevelopment())
             .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
     });
 }
+
+// ─── Request Logging Middleware ────────────────────────────────────────
+app.Use(async (context, next) =>
+{
+    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("RequestLogger");
+
+    var method = context.Request.Method;
+    var path = context.Request.Path;
+    var query = context.Request.QueryString;
+
+    // Read request body
+    context.Request.EnableBuffering();
+    var body = "";
+    if (context.Request.ContentLength > 0)
+    {
+        using var reader = new StreamReader(context.Request.Body, leaveOpen: true);
+        body = await reader.ReadToEndAsync();
+        context.Request.Body.Position = 0;
+    }
+
+    logger.LogInformation("→ {Method} {Path}{Query}", method, path, query);
+    if (!string.IsNullOrEmpty(body))
+        logger.LogInformation("  Body: {Body}", body.Length > 2000 ? body[..2000] + "...(truncated)" : body);
+
+    await next();
+
+    logger.LogInformation("← {Method} {Path} → {StatusCode}", method, path, context.Response.StatusCode);
+});
 
 app.UseCors();
 app.UseAuthentication();

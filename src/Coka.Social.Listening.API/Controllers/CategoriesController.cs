@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Coka.Social.Listening.Core.DTOs;
-using Coka.Social.Listening.Core.Interfaces;
+using Coka.Social.Listening.Core.Interfaces.Services;
 
 namespace Coka.Social.Listening.API.Controllers;
 
@@ -8,11 +8,11 @@ namespace Coka.Social.Listening.API.Controllers;
 [Route("api/[controller]")]
 public class CategoriesController : ControllerBase
 {
-    private readonly ICategoryRepository _categoryRepository;
+    private readonly ICategoryService _categoryService;
 
-    public CategoriesController(ICategoryRepository categoryRepository)
+    public CategoriesController(ICategoryService categoryService)
     {
-        _categoryRepository = categoryRepository;
+        _categoryService = categoryService;
     }
 
     /// <summary>
@@ -21,7 +21,7 @@ public class CategoriesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetCategoryTree()
     {
-        var tree = await _categoryRepository.GetCategoryTreeAsync();
+        var tree = await _categoryService.GetCategoryTreeAsync();
         return Ok(ApiResponse<List<CategoryGroupDto>>.Ok(tree));
     }
 }

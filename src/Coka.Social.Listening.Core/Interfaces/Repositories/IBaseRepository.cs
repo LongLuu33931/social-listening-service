@@ -1,6 +1,6 @@
 using Coka.Social.Listening.Core.Entities;
 
-namespace Coka.Social.Listening.Core.Interfaces;
+namespace Coka.Social.Listening.Core.Interfaces.Repositories;
 
 public interface IBaseRepository<TEntity> where TEntity : BaseEntity
 {

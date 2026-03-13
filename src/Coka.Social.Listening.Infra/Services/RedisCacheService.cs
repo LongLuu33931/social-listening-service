@@ -1,7 +1,7 @@
 using Dapper;
 using Coka.Social.Listening.Core.Entities;
 using Coka.Social.Listening.Core.Helpers;
-using Coka.Social.Listening.Core.Interfaces;
+using Coka.Social.Listening.Core.Interfaces.Services;
 using Coka.Social.Listening.Infra.Data;
 using Coka.Social.Listening.Infra.Helpers;
 

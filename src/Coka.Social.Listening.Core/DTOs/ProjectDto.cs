@@ -14,7 +14,9 @@ public class ProjectDto
     public string? GroupKey { get; set; }
     public string? GroupLabel { get; set; }
     public int Status { get; set; }
-    public DateOnly? ConfirmationDate { get; set; }
+    public DateTime? ConfirmationDate { get; set; }
+    public Guid? ProvinceId { get; set; }
+    public int TotalMentions { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
@@ -47,7 +49,7 @@ public class BulkUpdateInvestorItemDto
 public class BulkUpdateConfirmationDateItemDto
 {
     public Guid Id { get; set; }
-    public DateOnly ConfirmationDate { get; set; }
+    public DateTime ConfirmationDate { get; set; }
 }
 
 public class CreateProjectDto
@@ -59,5 +61,27 @@ public class CreateProjectDto
     public string? OriginUrl { get; set; }
     public string? Logo { get; set; }
     public string? CategoryKey { get; set; }
-    public DateOnly? ConfirmationDate { get; set; }
+    public DateTime? ConfirmationDate { get; set; }
+    public Guid? ProvinceId { get; set; }
+    public List<CreateArticleDto>? Articles { get; set; }
+}
+
+public class BulkCreateProjectResultDto
+{
+    public List<Guid> ProjectIds { get; set; } = new();
+    public int ArticlesInserted { get; set; }
+    public int ArticlesSkipped { get; set; }
+}
+
+public class UpdateProjectDto
+{
+    public string? Name { get; set; }
+    public string? Source { get; set; }
+    public string? Location { get; set; }
+    public string? Investor { get; set; }
+    public string? OriginUrl { get; set; }
+    public string? Logo { get; set; }
+    public string? CategoryKey { get; set; }
+    public DateTime? ConfirmationDate { get; set; }
+    public Guid? ProvinceId { get; set; }
 }

@@ -6,7 +6,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Coka.Social.Listening.Core.DTOs.Auth;
 using Coka.Social.Listening.Core.Entities;
-using Coka.Social.Listening.Core.Interfaces;
+using Coka.Social.Listening.Core.Interfaces.Repositories;
+using Coka.Social.Listening.Core.Interfaces.Services;
 using Coka.Social.Listening.Core.Settings;
 
 namespace Coka.Social.Listening.Infra.Services;

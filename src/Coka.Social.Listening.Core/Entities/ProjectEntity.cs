@@ -30,5 +30,8 @@ public class ProjectEntity : BaseEntity
     public int Status { get; set; } = 1;
 
     [Column("confirmation_date")]
-    public DateOnly? ConfirmationDate { get; set; }
+    public DateTime? ConfirmationDate { get; set; }
+
+    [Column("province_id")]
+    public Guid? ProvinceId { get; set; }
 }
