@@ -6,11 +6,10 @@ WORKDIR /src
 COPY . .
 
 # Restore dependencies
-WORKDIR /src/src/Coka.Social.Listening.API
-RUN dotnet restore
+RUN dotnet restore src/Coka.Social.Listening.API/Coka.Social.Listening.API.csproj
 
 # Build the application
-RUN dotnet publish -c Release -o /app/build
+RUN dotnet publish src/Coka.Social.Listening.API/Coka.Social.Listening.API.csproj -c Release -o /app/build
 
 # Use the official .NET runtime image for running the app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
