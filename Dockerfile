@@ -1,5 +1,5 @@
 # Use the official .NET SDK image for building
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 # Copy the entire solution structure
@@ -12,7 +12,7 @@ RUN dotnet restore src/Coka.Social.Listening.API/Coka.Social.Listening.API.cspro
 RUN dotnet publish src/Coka.Social.Listening.API/Coka.Social.Listening.API.csproj -c Release -o /app/build
 
 # Use the official .NET runtime image for running the app
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 
 # Cài đặt timezone cho container
 RUN apt-get update && \

@@ -70,8 +70,9 @@ builder.Services.AddAuthorization();
 // ─── Controllers ───────────────────────────────────────────────────────
 builder.Services.AddControllers();
 
-// ─── OpenAPI (.NET 10 built-in) ────────────────────────────────────────
-builder.Services.AddOpenApi();
+// ─── OpenAPI ────────────────────────────────────────────────────────
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 // ─── CORS ──────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
@@ -87,7 +88,8 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // ─── Scalar API Docs (all environments) ───────────────────────────────
-app.MapOpenApi();
+app.UseSwagger();
+app.UseSwaggerUI();
 app.MapScalarApiReference(options =>
 {
     options
