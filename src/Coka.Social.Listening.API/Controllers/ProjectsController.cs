@@ -59,13 +59,49 @@ public class ProjectsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
+        // Detect admin context from Referer or Origin header
+        var referer = Request.Headers.Referer.ToString();
+        var origin = Request.Headers.Origin.ToString();
+        var isAdmin = referer.Contains("admin", StringComparison.OrdinalIgnoreCase)
+                   || origin.Contains("admin", StringComparison.OrdinalIgnoreCase);
+
         var filter = new ProjectFilterDto
         {
             Search = search,
             CategoryKey = categoryKey,
             GroupKey = groupKey,
             Page = page,
-            PageSize = pageSize
+            PageSize = pageSize,
+            IsAdmin = isAdmin
+        };
+
+        var result = await _projectService.GetProjectsAsync(filter);
+        return Ok(ApiResponse<PagedResult<ProjectDto>>.Ok(result));
+    }
+
+    /// <summary>
+    /// Get public projects (only active, only approved mentions counted)
+    /// </summary>
+    [HttpGet("public")]
+    public async Task<IActionResult> GetPublicProjects(
+        [FromQuery] string? search,
+        [FromQuery] string? categoryKey,
+        [FromQuery] string? groupKey,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var filter = new ProjectFilterDto
+        {
+            Search = search,
+            CategoryKey = categoryKey,
+            GroupKey = groupKey,
+            Page = page,
+            PageSize = pageSize,
+            IsAdmin = false
         };
 
         var result = await _projectService.GetProjectsAsync(filter);
@@ -167,16 +203,20 @@ public class ProjectsController : ControllerBase
     }
 
     /// <summary>
-    /// Get projects ranked by total mentions (articles + tiktok + youtube) descending
+    /// Get projects ranked by total mentions (articles + tiktok + youtube + facebook) descending.
+    /// Use period=week for last 7 days, period=month for last 30 days, or omit for all time.
     /// </summary>
     [HttpGet("ranking")]
-    public async Task<IActionResult> GetProjectsRanking([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> GetProjectsRanking(
+        [FromQuery] string? period,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var result = await _projectService.GetProjectsRankedByMentionsAsync(page, pageSize);
+        var result = await _projectService.GetProjectsRankedByMentionsAsync(page, pageSize, period);
         return Ok(ApiResponse<PagedResult<ProjectDto>>.Ok(result));
     }
 
@@ -242,7 +282,7 @@ public class ProjectsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var result = await _projectService.GetProjectArticlesAsync(id, page, pageSize);
+        var result = await _projectService.GetProjectArticlesAsync(id, page, pageSize, IsAdminRequest());
         return Ok(ApiResponse<PagedResult<ArticleDto>>.Ok(result));
     }
 
@@ -256,7 +296,7 @@ public class ProjectsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var result = await _projectService.GetProjectTiktokVideosAsync(id, page, pageSize);
+        var result = await _projectService.GetProjectTiktokVideosAsync(id, page, pageSize, IsAdminRequest());
         return Ok(ApiResponse<PagedResult<TiktokMentionDto>>.Ok(result));
     }
 
@@ -270,8 +310,83 @@ public class ProjectsController : ControllerBase
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var result = await _projectService.GetProjectYoutubeVideosAsync(id, page, pageSize);
+        var result = await _projectService.GetProjectYoutubeVideosAsync(id, page, pageSize, IsAdminRequest());
         return Ok(ApiResponse<PagedResult<YoutubeMentionDto>>.Ok(result));
+    }
+
+    /// <summary>
+    /// Get Facebook posts (mentions) for a project
+    /// </summary>
+    [HttpGet("{id:guid}/mentions/facebook")]
+    public async Task<IActionResult> GetProjectFacebookPosts(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var result = await _projectService.GetProjectFacebookPostsAsync(id, page, pageSize, IsAdminRequest());
+        return Ok(ApiResponse<PagedResult<FacebookPostMentionDto>>.Ok(result));
+    }
+
+    /// <summary>
+    /// Client submits a new project for review (status = 0, pending approval)
+    /// </summary>
+    [HttpPost("submit")]
+    public async Task<IActionResult> SubmitProject([FromBody] SubmitProjectDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Name))
+            return BadRequest(ApiResponse<Guid>.Fail("Project name is required"));
+
+        var id = await _projectService.SubmitAsync(dto);
+        return Ok(ApiResponse<Guid>.Ok(id, "Project submitted successfully, pending approval"));
+    }
+
+    /// <summary>
+    /// Get pending project submissions (status = 0)
+    /// </summary>
+    [HttpGet("pending")]
+    public async Task<IActionResult> GetPendingProjects([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+
+        var result = await _projectService.GetPendingProjectsAsync(page, pageSize);
+        return Ok(ApiResponse<PagedResult<ProjectDto>>.Ok(result));
+    }
+
+    /// <summary>
+    /// Approve a pending project submission (status 0 → 1)
+    /// </summary>
+    [HttpPatch("{id:guid}/approve-submission")]
+    public async Task<IActionResult> ApproveSubmission(Guid id)
+    {
+        var success = await _projectService.ApproveSubmissionAsync(id);
+        if (!success)
+            return NotFound(ApiResponse<bool>.Fail("Pending project not found"));
+
+        return Ok(ApiResponse<bool>.Ok(true, "Project approved successfully"));
+    }
+
+    /// <summary>
+    /// Reject (delete) a pending project submission
+    /// </summary>
+    [HttpDelete("{id:guid}/reject-submission")]
+    public async Task<IActionResult> RejectSubmission(Guid id)
+    {
+        var success = await _projectService.RejectSubmissionAsync(id);
+        if (!success)
+            return NotFound(ApiResponse<bool>.Fail("Pending project not found"));
+
+        return Ok(ApiResponse<bool>.Ok(true, "Project rejected and removed"));
+    }
+
+    private bool IsAdminRequest()
+    {
+        var referer = Request.Headers.Referer.ToString();
+        var origin = Request.Headers.Origin.ToString();
+        return referer.Contains("admin", StringComparison.OrdinalIgnoreCase)
+            || origin.Contains("admin", StringComparison.OrdinalIgnoreCase);
     }
 }
 

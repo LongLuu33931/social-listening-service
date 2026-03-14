@@ -17,7 +17,20 @@ public class ProjectDto
     public DateTime? ConfirmationDate { get; set; }
     public Guid? ProvinceId { get; set; }
     public int TotalMentions { get; set; }
+    public int ApprovedMentions { get; set; }
+    public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+/// <summary>
+/// DTO for client project submission (status = 0, pending approval)
+/// </summary>
+public class SubmitProjectDto
+{
+    public string Name { get; set; } = string.Empty;
+    public string? OriginUrl { get; set; }
+    public string? CategoryKey { get; set; }
+    public string? Notes { get; set; }
 }
 
 public class ProjectFilterDto
@@ -27,6 +40,7 @@ public class ProjectFilterDto
     public string? GroupKey { get; set; }
     public bool? MissingInvestor { get; set; }
     public bool? MissingConfirmationDate { get; set; }
+    public bool IsAdmin { get; set; }
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }

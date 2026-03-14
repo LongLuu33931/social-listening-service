@@ -34,4 +34,7 @@ public class ProjectEntity : BaseEntity
 
     [Column("province_id")]
     public Guid? ProvinceId { get; set; }
+
+    [Column("notes")]
+    public string? Notes { get; set; }
 }

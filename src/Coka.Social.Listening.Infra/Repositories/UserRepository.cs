@@ -18,7 +18,7 @@ public class UserRepository : IUserRepository
     {
         using var db = _dbFactory.CreateConnection();
         return await db.QuerySingleOrDefaultAsync<UserEntity>(
-            @"SELECT id, username, email, password_hash AS PasswordHash, full_name AS FullName,
+            @"SELECT id, username, email, full_name AS FullName,
                      is_active AS IsActive, refresh_token AS RefreshToken,
                      refresh_token_expiry AS RefreshTokenExpiry,
                      created_at AS CreatedAt, updated_at AS UpdatedAt,
@@ -30,7 +30,7 @@ public class UserRepository : IUserRepository
     {
         using var db = _dbFactory.CreateConnection();
         return await db.QuerySingleOrDefaultAsync<UserEntity>(
-            @"SELECT id, username, email, password_hash AS PasswordHash, full_name AS FullName,
+            @"SELECT id, username, email, full_name AS FullName,
                      is_active AS IsActive, refresh_token AS RefreshToken,
                      refresh_token_expiry AS RefreshTokenExpiry,
                      created_at AS CreatedAt, updated_at AS UpdatedAt,
@@ -42,7 +42,7 @@ public class UserRepository : IUserRepository
     {
         using var db = _dbFactory.CreateConnection();
         return await db.QuerySingleOrDefaultAsync<UserEntity>(
-            @"SELECT id, username, email, password_hash AS PasswordHash, full_name AS FullName,
+            @"SELECT id, username, email, full_name AS FullName,
                      is_active AS IsActive, refresh_token AS RefreshToken,
                      refresh_token_expiry AS RefreshTokenExpiry,
                      created_at AS CreatedAt, updated_at AS UpdatedAt,
@@ -58,9 +58,9 @@ public class UserRepository : IUserRepository
         user.UpdatedAt = DateTime.Now;
 
         await db.ExecuteAsync(
-            @"INSERT INTO users (id, username, email, password_hash, full_name, is_active,
+            @"INSERT INTO users (id, username, email, full_name, is_active,
                                  created_at, updated_at, created_by, updated_by)
-              VALUES (@Id, @Username, @Email, @PasswordHash, @FullName, @IsActive,
+              VALUES (@Id, @Username, @Email, @FullName, @IsActive,
                       @CreatedAt, @UpdatedAt, @CreatedBy, @UpdatedBy)", user);
 
         return user.Id;
@@ -72,7 +72,7 @@ public class UserRepository : IUserRepository
         user.UpdatedAt = DateTime.Now;
 
         await db.ExecuteAsync(
-            @"UPDATE users SET username = @Username, email = @Email, password_hash = @PasswordHash,
+            @"UPDATE users SET username = @Username, email = @Email,
                                full_name = @FullName, is_active = @IsActive,
                                updated_at = @UpdatedAt, updated_by = @UpdatedBy
               WHERE id = @Id", user);

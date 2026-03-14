@@ -9,56 +9,91 @@ using Coka.Social.Listening.Core.Entities;
 using Coka.Social.Listening.Core.Interfaces.Repositories;
 using Coka.Social.Listening.Core.Interfaces.Services;
 using Coka.Social.Listening.Core.Settings;
+using Coka.Social.Listening.Infra.Helpers;
 
 namespace Coka.Social.Listening.Infra.Services;
 
 public class AuthService : IAuthService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IEmailService _emailService;
+    private readonly RedisHelper _redis;
     private readonly JwtSettings _jwtSettings;
 
-    public AuthService(IUserRepository userRepository, IConfiguration configuration)
+    private const int OtpLength = 6;
+    private static readonly TimeSpan OtpTtl = TimeSpan.FromMinutes(5);
+
+    public AuthService(
+        IUserRepository userRepository,
+        IEmailService emailService,
+        RedisHelper redis,
+        IConfiguration configuration)
     {
         _userRepository = userRepository;
+        _emailService = emailService;
+        _redis = redis;
         _jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>()
             ?? throw new InvalidOperationException("JWT settings not configured.");
     }
 
-    public async Task<AuthResponseDto?> LoginAsync(LoginRequestDto request)
+    // ─── OTP Flow ──────────────────────────────────────────────────────────
+
+    public async Task<bool> SendOtpAsync(OtpRequestDto request)
     {
-        var user = await _userRepository.GetByUsernameAsync(request.Username);
-        if (user is null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-            return null;
+        var email = request.Email.Trim().ToLowerInvariant();
 
-        if (!user.IsActive)
-            return null;
-
-        return await GenerateTokens(user);
-    }
-
-    public async Task<AuthResponseDto?> RegisterAsync(RegisterRequestDto request)
-    {
-        var existingUser = await _userRepository.GetByUsernameAsync(request.Username);
-        if (existingUser is not null)
-            return null;
-
-        var existingEmail = await _userRepository.GetByEmailAsync(request.Email);
-        if (existingEmail is not null)
-            return null;
-
-        var user = new UserEntity
+        // Check if user exists, if not create one
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user is null)
         {
-            Username = request.Username,
-            Email = request.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            FullName = request.FullName,
-            IsActive = true
-        };
+            user = new UserEntity
+            {
+                Username = email,
+                Email = email,
+                IsActive = true
+            };
+            await _userRepository.CreateAsync(user);
+        }
 
-        await _userRepository.CreateAsync(user);
+        // Generate OTP
+        var otp = GenerateOtp();
+
+        // Store OTP in Redis with TTL
+        var redisKey = $"otp:{email}";
+        await _redis.SetStringAsync(redisKey, otp, OtpTtl);
+
+        // Send OTP email (fire-and-forget)
+        _ = Task.Run(async () =>
+        {
+            try { await _emailService.SendOtpEmailAsync(email, otp); }
+            catch { /* log if needed */ }
+        });
+
+        return true;
+    }
+
+    public async Task<AuthResponseDto?> VerifyOtpAsync(VerifyOtpRequestDto request)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+        var redisKey = $"otp:{email}";
+
+        // Get stored OTP from Redis
+        var storedOtp = await _redis.GetStringAsync(redisKey);
+        if (storedOtp is null || storedOtp != request.Otp)
+            return null;
+
+        // OTP verified — delete it
+        await _redis.DeleteAsync(redisKey);
+
+        // Find user and generate tokens
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user is null || !user.IsActive)
+            return null;
 
         return await GenerateTokens(user);
     }
+
+    // ─── Refresh Token ─────────────────────────────────────────────────────
 
     public async Task<AuthResponseDto?> RefreshTokenAsync(RefreshTokenRequestDto request)
     {
@@ -76,6 +111,17 @@ public class AuthService : IAuthService
             return null;
 
         return await GenerateTokens(user);
+    }
+
+    // ─── Helpers ───────────────────────────────────────────────────────────
+
+    private static string GenerateOtp()
+    {
+        var bytes = new byte[4];
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(bytes);
+        var number = Math.Abs(BitConverter.ToInt32(bytes, 0)) % (int)Math.Pow(10, OtpLength);
+        return number.ToString().PadLeft(OtpLength, '0');
     }
 
     private async Task<AuthResponseDto> GenerateTokens(UserEntity user)

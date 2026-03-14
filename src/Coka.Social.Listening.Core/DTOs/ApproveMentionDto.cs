@@ -11,6 +11,7 @@ public class BulkApproveMentionDto
     public List<Guid>? ArticleIds { get; set; }
     public List<int>? TiktokIds { get; set; }
     public List<int>? YoutubeIds { get; set; }
+    public List<int>? FacebookIds { get; set; }
 }
 
 public class BulkApproveResultDto
@@ -18,4 +19,5 @@ public class BulkApproveResultDto
     public int ArticlesUpdated { get; set; }
     public int TiktokUpdated { get; set; }
     public int YoutubeUpdated { get; set; }
+    public int FacebookUpdated { get; set; }
 }

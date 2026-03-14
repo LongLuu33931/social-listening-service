@@ -16,8 +16,13 @@ public interface IProjectService
     Task<int> BulkUpdateConfirmationDateAsync(List<BulkUpdateConfirmationDateItemDto> items);
     Task<bool> HideAsync(Guid id);
     Task<bool> ShowAsync(Guid id);
-    Task<PagedResult<ArticleDto>> GetProjectArticlesAsync(Guid projectId, int page, int pageSize);
-    Task<PagedResult<TiktokMentionDto>> GetProjectTiktokVideosAsync(Guid projectId, int page, int pageSize);
-    Task<PagedResult<YoutubeMentionDto>> GetProjectYoutubeVideosAsync(Guid projectId, int page, int pageSize);
-    Task<PagedResult<ProjectDto>> GetProjectsRankedByMentionsAsync(int page, int pageSize);
+    Task<PagedResult<ArticleDto>> GetProjectArticlesAsync(Guid projectId, int page, int pageSize, bool isAdmin = false);
+    Task<PagedResult<TiktokMentionDto>> GetProjectTiktokVideosAsync(Guid projectId, int page, int pageSize, bool isAdmin = false);
+    Task<PagedResult<YoutubeMentionDto>> GetProjectYoutubeVideosAsync(Guid projectId, int page, int pageSize, bool isAdmin = false);
+    Task<PagedResult<FacebookPostMentionDto>> GetProjectFacebookPostsAsync(Guid projectId, int page, int pageSize, bool isAdmin = false);
+    Task<PagedResult<ProjectDto>> GetProjectsRankedByMentionsAsync(int page, int pageSize, string? period = null);
+    Task<Guid> SubmitAsync(SubmitProjectDto dto);
+    Task<PagedResult<ProjectDto>> GetPendingProjectsAsync(int page, int pageSize);
+    Task<bool> ApproveSubmissionAsync(Guid id);
+    Task<bool> RejectSubmissionAsync(Guid id);
 }

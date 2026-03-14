@@ -31,6 +31,7 @@ builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProvinceService, ProvinceService>();
 builder.Services.AddScoped<IArticleService, ArticleService>();
 builder.Services.AddScoped<IMentionService, MentionService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // ─── Redis ─────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<Coka.Social.Listening.Infra.Data.RedisConnectionFactory>();
@@ -85,15 +86,45 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// ─── Middleware Pipeline ───────────────────────────────────────────────
-if (app.Environment.IsDevelopment())
+// ─── Scalar API Docs (all environments) ───────────────────────────────
+app.MapOpenApi();
+app.MapScalarApiReference(options =>
 {
-    app.MapOpenApi();
-    app.MapScalarApiReference(options =>
+    options
+        .WithTitle("Coka Social Listening API")
+        .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+});
+
+// ─── Basic Auth for Scalar in Production ──────────────────────────────
+if (!app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
     {
-        options
-            .WithTitle("Coka Social Listening API")
-            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+        var path = context.Request.Path.Value ?? "";
+        if (path.StartsWith("/scalar", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/openapi", StringComparison.OrdinalIgnoreCase))
+        {
+            var authHeader = context.Request.Headers.Authorization.ToString();
+            if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Basic "))
+            {
+                context.Response.Headers["WWW-Authenticate"] = "Basic realm=\"Scalar API Docs\"";
+                context.Response.StatusCode = 401;
+                return;
+            }
+
+            var encoded = authHeader["Basic ".Length..].Trim();
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+            var parts = decoded.Split(':', 2);
+
+            if (parts.Length != 2 || parts[0] != "AZVD" || parts[1] != "Azvidi@2019")
+            {
+                context.Response.Headers["WWW-Authenticate"] = "Basic realm=\"Scalar API Docs\"";
+                context.Response.StatusCode = 401;
+                return;
+            }
+        }
+
+        await next();
     });
 }
 

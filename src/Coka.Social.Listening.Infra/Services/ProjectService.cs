@@ -122,17 +122,42 @@ public class ProjectService : IProjectService
         return await _projectRepository.ShowAsync(id);
     }
 
-    public Task<PagedResult<ArticleDto>> GetProjectArticlesAsync(Guid projectId, int page, int pageSize)
-        => _projectRepository.GetProjectArticlesAsync(projectId, page, pageSize);
+    public Task<PagedResult<ArticleDto>> GetProjectArticlesAsync(Guid projectId, int page, int pageSize, bool isAdmin = false)
+        => _projectRepository.GetProjectArticlesAsync(projectId, page, pageSize, isAdmin);
 
-    public Task<PagedResult<TiktokMentionDto>> GetProjectTiktokVideosAsync(Guid projectId, int page, int pageSize)
-        => _projectRepository.GetProjectTiktokVideosAsync(projectId, page, pageSize);
+    public Task<PagedResult<TiktokMentionDto>> GetProjectTiktokVideosAsync(Guid projectId, int page, int pageSize, bool isAdmin = false)
+        => _projectRepository.GetProjectTiktokVideosAsync(projectId, page, pageSize, isAdmin);
 
-    public Task<PagedResult<YoutubeMentionDto>> GetProjectYoutubeVideosAsync(Guid projectId, int page, int pageSize)
-        => _projectRepository.GetProjectYoutubeVideosAsync(projectId, page, pageSize);
+    public Task<PagedResult<YoutubeMentionDto>> GetProjectYoutubeVideosAsync(Guid projectId, int page, int pageSize, bool isAdmin = false)
+        => _projectRepository.GetProjectYoutubeVideosAsync(projectId, page, pageSize, isAdmin);
 
-    public Task<PagedResult<ProjectDto>> GetProjectsRankedByMentionsAsync(int page, int pageSize)
-        => _projectRepository.GetProjectsRankedByMentionsAsync(page, pageSize);
+    public Task<PagedResult<FacebookPostMentionDto>> GetProjectFacebookPostsAsync(Guid projectId, int page, int pageSize, bool isAdmin = false)
+        => _projectRepository.GetProjectFacebookPostsAsync(projectId, page, pageSize, isAdmin);
+
+    public Task<PagedResult<ProjectDto>> GetProjectsRankedByMentionsAsync(int page, int pageSize, string? period = null)
+        => _projectRepository.GetProjectsRankedByMentionsAsync(page, pageSize, period);
+
+    public async Task<Guid> SubmitAsync(SubmitProjectDto dto)
+    {
+        var entity = new ProjectEntity
+        {
+            Name = dto.Name,
+            OriginUrl = dto.OriginUrl,
+            CategoryKey = dto.CategoryKey,
+            Notes = dto.Notes,
+            Status = 0  // pending approval
+        };
+        return await _projectRepository.AddAsync(entity);
+    }
+
+    public Task<PagedResult<ProjectDto>> GetPendingProjectsAsync(int page, int pageSize)
+        => _projectRepository.GetPendingProjectsAsync(page, pageSize);
+
+    public Task<bool> ApproveSubmissionAsync(Guid id)
+        => _projectRepository.ApproveSubmissionAsync(id);
+
+    public Task<bool> RejectSubmissionAsync(Guid id)
+        => _projectRepository.RejectSubmissionAsync(id);
 
     private static ProjectEntity MapToEntity(CreateProjectDto dto)
     {

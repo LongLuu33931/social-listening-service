@@ -19,7 +19,11 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         var projectTable = Coka.Social.Listening.Core.Helpers.TableHelper.GetTableName<Coka.Social.Listening.Core.Entities.ProjectEntity>();
         var categoryTable = Coka.Social.Listening.Core.Helpers.TableHelper.GetTableName<Coka.Social.Listening.Core.Entities.CategoryEntity>();
 
-        var whereClauses = new List<string> { "p.status = 1" };
+        var whereClauses = new List<string>();
+        if (!filter.IsAdmin)
+            whereClauses.Add("p.status = 1");
+        else
+            whereClauses.Add("p.status IN (0, 1)"); // admin sees pending + active
         var parameters = new DynamicParameters();
 
         // Filter by category_key
@@ -71,6 +75,11 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         parameters.Add("Offset", offset);
         parameters.Add("PageSize", filter.PageSize);
 
+        var approvedFilterArt = filter.IsAdmin ? "" : "AND art.is_approved = true";
+        var approvedFilterTv  = filter.IsAdmin ? "" : "AND tv.is_approved = true";
+        var approvedFilterYv  = filter.IsAdmin ? "" : "AND yv.is_approved = true";
+        var approvedFilterFb  = filter.IsAdmin ? "" : "AND fb.is_approved = true";
+
         var dataSql = $@"
             SELECT
                 p.id                AS Id,
@@ -88,15 +97,23 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 p.confirmation_date AS ConfirmationDate,
                 p.province_id       AS ProvinceId,
                 (
+                    (SELECT COUNT(*) FROM articles art WHERE art.project_id = p.id AND art.status = 1 {approvedFilterArt}) +
+                    (SELECT COUNT(*) FROM tiktok_videos tv WHERE tv.project_id = p.id {approvedFilterTv}) +
+                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id {approvedFilterYv}) +
+                    (SELECT COUNT(*) FROM facebook_posts fb WHERE fb.project_id = p.id {approvedFilterFb})
+                ) AS TotalMentions,
+                (
                     (SELECT COUNT(*) FROM articles art WHERE art.project_id = p.id AND art.status = 1 AND art.is_approved = true) +
                     (SELECT COUNT(*) FROM tiktok_videos tv WHERE tv.project_id = p.id AND tv.is_approved = true) +
-                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id AND yv.is_approved = true)
-                ) AS TotalMentions,
+                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id AND yv.is_approved = true) +
+                    (SELECT COUNT(*) FROM facebook_posts fb WHERE fb.project_id = p.id AND fb.is_approved = true)
+                ) AS ApprovedMentions,
+                p.notes             AS Notes,
                 p.created_at        AS CreatedAt
             FROM {projectTable} p
             LEFT JOIN {categoryTable} c ON c.key = p.category_key
             WHERE {whereStr}
-            ORDER BY p.created_at DESC
+            ORDER BY p.status ASC, p.confirmation_date DESC NULLS LAST, p.created_at DESC
             OFFSET @Offset LIMIT @PageSize";
 
         var items = (await db.QueryAsync<ProjectDto>(dataSql, parameters)).ToList();
@@ -233,7 +250,8 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 (
                     (SELECT COUNT(*) FROM articles art WHERE art.project_id = p.id AND art.status = 1) +
                     (SELECT COUNT(*) FROM tiktok_videos tv WHERE tv.project_id = p.id) +
-                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id)
+                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id) +
+                    (SELECT COUNT(*) FROM facebook_posts fb WHERE fb.project_id = p.id)
                 ) AS TotalMentions,
                 p.created_at        AS CreatedAt
             FROM {projectTable} p
@@ -270,7 +288,8 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 (
                     (SELECT COUNT(*) FROM articles art WHERE art.project_id = p.id AND art.status = 1) +
                     (SELECT COUNT(*) FROM tiktok_videos tv WHERE tv.project_id = p.id) +
-                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id)
+                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id) +
+                    (SELECT COUNT(*) FROM facebook_posts fb WHERE fb.project_id = p.id)
                 ) AS TotalMentions,
                 p.created_at        AS CreatedAt
             FROM {projectTable} p
@@ -280,7 +299,7 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         return await db.QueryFirstOrDefaultAsync<ProjectDto>(sql, new { Id = id });
     }
 
-    public async Task<PagedResult<ProjectDto>> GetProjectsRankedByMentionsAsync(int page, int pageSize)
+    public async Task<PagedResult<ProjectDto>> GetProjectsRankedByMentionsAsync(int page, int pageSize, string? period = null)
     {
         using var db = _dbFactory.CreateConnection();
         var projectTable = Coka.Social.Listening.Core.Helpers.TableHelper.GetTableName<Coka.Social.Listening.Core.Entities.ProjectEntity>();
@@ -288,6 +307,32 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
 
         var countSql = $"SELECT COUNT(*) FROM {projectTable} WHERE status = 1";
         var totalCount = await db.ExecuteScalarAsync<int>(countSql);
+
+        // Build time filter based on period
+        var timeFilter = period?.ToLower() switch
+        {
+            "week" => "AND art.created_at >= NOW() - INTERVAL '7 days'",
+            "month" => "AND art.created_at >= NOW() - INTERVAL '30 days'",
+            _ => ""
+        };
+        var timeFilterTiktok = period?.ToLower() switch
+        {
+            "week" => "AND tv.inserted_at >= NOW() - INTERVAL '7 days'",
+            "month" => "AND tv.inserted_at >= NOW() - INTERVAL '30 days'",
+            _ => ""
+        };
+        var timeFilterYoutube = period?.ToLower() switch
+        {
+            "week" => "AND yv.inserted_at >= NOW() - INTERVAL '7 days'",
+            "month" => "AND yv.inserted_at >= NOW() - INTERVAL '30 days'",
+            _ => ""
+        };
+        var timeFilterFacebook = period?.ToLower() switch
+        {
+            "week" => "AND fb.inserted_at >= NOW() - INTERVAL '7 days'",
+            "month" => "AND fb.inserted_at >= NOW() - INTERVAL '30 days'",
+            _ => ""
+        };
 
         var offset = (page - 1) * pageSize;
         var parameters = new DynamicParameters();
@@ -311,9 +356,10 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 p.confirmation_date AS ConfirmationDate,
                 p.province_id       AS ProvinceId,
                 (
-                    (SELECT COUNT(*) FROM articles art WHERE art.project_id = p.id AND art.status = 1 AND art.is_approved = true) +
-                    (SELECT COUNT(*) FROM tiktok_videos tv WHERE tv.project_id = p.id AND tv.is_approved = true) +
-                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id AND yv.is_approved = true)
+                    (SELECT COUNT(*) FROM articles art WHERE art.project_id = p.id AND art.status = 1 AND art.is_approved = true {timeFilter}) +
+                    (SELECT COUNT(*) FROM tiktok_videos tv WHERE tv.project_id = p.id AND tv.is_approved = true {timeFilterTiktok}) +
+                    (SELECT COUNT(*) FROM youtube_videos yv WHERE yv.project_id = p.id AND yv.is_approved = true {timeFilterYoutube}) +
+                    (SELECT COUNT(*) FROM facebook_posts fb WHERE fb.project_id = p.id AND fb.is_approved = true {timeFilterFacebook})
                 ) AS TotalMentions,
                 p.created_at        AS CreatedAt
             FROM {projectTable} p
@@ -344,7 +390,7 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         return affected > 0;
     }
 
-    public async Task<PagedResult<ArticleDto>> GetProjectArticlesAsync(Guid projectId, int page, int pageSize)
+    public async Task<PagedResult<ArticleDto>> GetProjectArticlesAsync(Guid projectId, int page, int pageSize, bool isAdmin = false)
     {
         using var db = _dbFactory.CreateConnection();
         var articleTable = Core.Helpers.TableHelper.GetTableName<Core.Entities.ArticleEntity>();
@@ -353,7 +399,9 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         var parameters = new DynamicParameters();
         parameters.Add("ProjectId", projectId);
 
-        var countSql = $"SELECT COUNT(*) FROM {articleTable} WHERE project_id = @ProjectId AND status = 1";
+        var approvedFilter = isAdmin ? "" : "AND a.is_approved = true";
+
+        var countSql = $"SELECT COUNT(*) FROM {articleTable} a WHERE a.project_id = @ProjectId AND a.status = 1 {approvedFilter}";
         var totalCount = await db.ExecuteScalarAsync<int>(countSql, parameters);
 
         var offset = (page - 1) * pageSize;
@@ -379,8 +427,8 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 a.created_at    AS CreatedAt
             FROM {articleTable} a
             LEFT JOIN {projectTable} p ON p.id = a.project_id
-            WHERE a.project_id = @ProjectId AND a.status = 1
-            ORDER BY a.pub_date DESC NULLS LAST
+            WHERE a.project_id = @ProjectId AND a.status = 1 {approvedFilter}
+            ORDER BY a.is_approved ASC, a.pub_date DESC NULLS LAST
             OFFSET @Offset LIMIT @PageSize";
 
         var items = (await db.QueryAsync<ArticleDto>(dataSql, parameters)).ToList();
@@ -391,21 +439,23 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         };
     }
 
-    public async Task<PagedResult<TiktokMentionDto>> GetProjectTiktokVideosAsync(Guid projectId, int page, int pageSize)
+    public async Task<PagedResult<TiktokMentionDto>> GetProjectTiktokVideosAsync(Guid projectId, int page, int pageSize, bool isAdmin = false)
     {
         using var db = _dbFactory.CreateConnection();
 
         var parameters = new DynamicParameters();
         parameters.Add("ProjectId", projectId);
 
-        var countSql = "SELECT COUNT(*) FROM tiktok_videos WHERE project_id = @ProjectId";
+        var approvedFilter = isAdmin ? "" : "AND is_approved = true";
+
+        var countSql = $"SELECT COUNT(*) FROM tiktok_videos WHERE project_id = @ProjectId {approvedFilter}";
         var totalCount = await db.ExecuteScalarAsync<int>(countSql, parameters);
 
         var offset = (page - 1) * pageSize;
         parameters.Add("Offset", offset);
         parameters.Add("PageSize", pageSize);
 
-        var dataSql = @"
+        var dataSql = $@"
             SELECT
                 id              AS Id,
                 video_id        AS VideoId,
@@ -419,8 +469,8 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 create_time     AS CreateTime,
                 is_approved     AS IsApproved
             FROM tiktok_videos
-            WHERE project_id = @ProjectId
-            ORDER BY create_time DESC NULLS LAST
+            WHERE project_id = @ProjectId {approvedFilter}
+            ORDER BY is_approved ASC, create_time DESC NULLS LAST
             OFFSET @Offset LIMIT @PageSize";
 
         var items = (await db.QueryAsync<TiktokMentionDto>(dataSql, parameters)).ToList();
@@ -431,21 +481,23 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         };
     }
 
-    public async Task<PagedResult<YoutubeMentionDto>> GetProjectYoutubeVideosAsync(Guid projectId, int page, int pageSize)
+    public async Task<PagedResult<YoutubeMentionDto>> GetProjectYoutubeVideosAsync(Guid projectId, int page, int pageSize, bool isAdmin = false)
     {
         using var db = _dbFactory.CreateConnection();
 
         var parameters = new DynamicParameters();
         parameters.Add("ProjectId", projectId);
 
-        var countSql = "SELECT COUNT(*) FROM youtube_videos WHERE project_id = @ProjectId";
+        var approvedFilter = isAdmin ? "" : "AND is_approved = true";
+
+        var countSql = $"SELECT COUNT(*) FROM youtube_videos WHERE project_id = @ProjectId {approvedFilter}";
         var totalCount = await db.ExecuteScalarAsync<int>(countSql, parameters);
 
         var offset = (page - 1) * pageSize;
         parameters.Add("Offset", offset);
         parameters.Add("PageSize", pageSize);
 
-        var dataSql = @"
+        var dataSql = $@"
             SELECT
                 id              AS Id,
                 video_id        AS VideoId,
@@ -462,8 +514,8 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
                 tags            AS Tags,
                 is_approved     AS IsApproved
             FROM youtube_videos
-            WHERE project_id = @ProjectId
-            ORDER BY published_at DESC NULLS LAST
+            WHERE project_id = @ProjectId {approvedFilter}
+            ORDER BY is_approved ASC, published_at DESC NULLS LAST
             OFFSET @Offset LIMIT @PageSize";
 
         var items = (await db.QueryAsync<YoutubeMentionDto>(dataSql, parameters)).ToList();
@@ -472,5 +524,113 @@ public class ProjectRepository : BaseRepository<ProjectEntity>, IProjectReposito
         {
             Items = items, TotalCount = totalCount, Page = page, PageSize = pageSize
         };
+    }
+
+    public async Task<PagedResult<FacebookPostMentionDto>> GetProjectFacebookPostsAsync(Guid projectId, int page, int pageSize, bool isAdmin = false)
+    {
+        using var db = _dbFactory.CreateConnection();
+
+        var parameters = new DynamicParameters();
+        parameters.Add("ProjectId", projectId);
+
+        var approvedFilter = isAdmin ? "" : "AND is_approved = true";
+
+        var countSql = $"SELECT COUNT(*) FROM facebook_posts WHERE project_id = @ProjectId {approvedFilter}";
+        var totalCount = await db.ExecuteScalarAsync<int>(countSql, parameters);
+
+        var offset = (page - 1) * pageSize;
+        parameters.Add("Offset", offset);
+        parameters.Add("PageSize", pageSize);
+
+        var dataSql = $@"
+            SELECT
+                id              AS Id,
+                post_id         AS PostId,
+                post_url        AS PostUrl,
+                post_type       AS PostType,
+                author_id       AS AuthorId,
+                author_name     AS AuthorName,
+                author_url      AS AuthorUrl,
+                message         AS Message,
+                reaction_count  AS ReactionCount,
+                comment_count   AS CommentCount,
+                share_count     AS ShareCount,
+                thumbnail_url   AS ThumbnailUrl,
+                published_at    AS PublishedAt,
+                is_approved     AS IsApproved
+            FROM facebook_posts
+            WHERE project_id = @ProjectId {approvedFilter}
+            ORDER BY is_approved ASC, published_at DESC NULLS LAST
+            OFFSET @Offset LIMIT @PageSize";
+
+        var items = (await db.QueryAsync<FacebookPostMentionDto>(dataSql, parameters)).ToList();
+
+        return new PagedResult<FacebookPostMentionDto>
+        {
+            Items = items, TotalCount = totalCount, Page = page, PageSize = pageSize
+        };
+    }
+
+    public async Task<PagedResult<ProjectDto>> GetPendingProjectsAsync(int page, int pageSize)
+    {
+        using var db = _dbFactory.CreateConnection();
+        var projectTable = Core.Helpers.TableHelper.GetTableName<Core.Entities.ProjectEntity>();
+        var categoryTable = Core.Helpers.TableHelper.GetTableName<Core.Entities.CategoryEntity>();
+
+        var countSql = $"SELECT COUNT(*) FROM {projectTable} WHERE status = 0";
+        var totalCount = await db.ExecuteScalarAsync<int>(countSql);
+
+        var offset = (page - 1) * pageSize;
+
+        var dataSql = $@"
+            SELECT
+                p.id                AS Id,
+                p.name              AS Name,
+                p.source            AS Source,
+                p.location          AS Location,
+                p.investor          AS Investor,
+                p.origin_url        AS OriginUrl,
+                p.logo              AS Logo,
+                p.category_key      AS CategoryKey,
+                c.label             AS CategoryLabel,
+                c.group_key         AS GroupKey,
+                c.group_label       AS GroupLabel,
+                p.status            AS Status,
+                p.confirmation_date AS ConfirmationDate,
+                p.province_id       AS ProvinceId,
+                0                   AS TotalMentions,
+                0                   AS ApprovedMentions,
+                p.notes             AS Notes,
+                p.created_at        AS CreatedAt
+            FROM {projectTable} p
+            LEFT JOIN {categoryTable} c ON c.key = p.category_key
+            WHERE p.status = 0
+            ORDER BY p.created_at DESC
+            OFFSET @Offset LIMIT @PageSize";
+
+        var items = (await db.QueryAsync<ProjectDto>(dataSql, new { Offset = offset, PageSize = pageSize })).ToList();
+
+        return new PagedResult<ProjectDto>
+        {
+            Items = items, TotalCount = totalCount, Page = page, PageSize = pageSize
+        };
+    }
+
+    public async Task<bool> ApproveSubmissionAsync(Guid id)
+    {
+        using var db = _dbFactory.CreateConnection();
+        var projectTable = Core.Helpers.TableHelper.GetTableName<Core.Entities.ProjectEntity>();
+        var sql = $"UPDATE {projectTable} SET status = 1, updated_at = NOW() WHERE id = @Id AND status = 0";
+        var affected = await db.ExecuteAsync(sql, new { Id = id });
+        return affected > 0;
+    }
+
+    public async Task<bool> RejectSubmissionAsync(Guid id)
+    {
+        using var db = _dbFactory.CreateConnection();
+        var projectTable = Core.Helpers.TableHelper.GetTableName<Core.Entities.ProjectEntity>();
+        var sql = $"DELETE FROM {projectTable} WHERE id = @Id AND status = 0";
+        var affected = await db.ExecuteAsync(sql, new { Id = id });
+        return affected > 0;
     }
 }
